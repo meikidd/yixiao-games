@@ -536,8 +536,9 @@
         // Render cats
         function render() {
             for (let cat of cats) {
-                cat.element.style.left = (cat.x - cat.radius) + 'px';
-                cat.element.style.top = (cat.y - cat.radius) + 'px';
+                const visualRadius = catLevels[cat.level].size / 2;
+                cat.element.style.left = (cat.x - visualRadius) + 'px';
+                cat.element.style.top = (cat.y - visualRadius) + 'px';
             }
         }
 
