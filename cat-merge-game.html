@@ -607,7 +607,10 @@
 
         // Touch support for mobile
         container.addEventListener('touchstart', (e) => {
+            // Don't block button clicks
+            if (e.target.tagName === 'BUTTON') return;
             e.preventDefault();
+            if (gameOver) return;
             const rect = container.getBoundingClientRect();
             const touch = e.touches[0];
             const x = touch.clientX - rect.left;
