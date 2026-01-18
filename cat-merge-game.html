@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cat Merge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,12 +17,14 @@
         body {
             background: linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 100%);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             overflow: hidden;
+            padding: 10px;
         }
 
         h1 {
@@ -49,13 +54,14 @@
 
         .game-container {
             position: relative;
-            width: 400px;
-            height: 500px;
+            width: min(400px, calc(100vw - 20px));
+            height: min(500px, calc(100dvh - 220px));
             background: rgba(100, 80, 120, 0.5);
             border: 4px solid #d4af37;
             border-radius: 10px;
             overflow: hidden;
             cursor: pointer;
+            touch-action: none;
         }
 
         .danger-zone {
@@ -165,6 +171,51 @@
             0%, 100% { opacity: 0.3; }
             50% { opacity: 0.6; }
         }
+
+        /* Mobile responsive styles */
+        @media (max-width: 420px) {
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 5px;
+            }
+            .score-board {
+                font-size: 1em;
+                margin-bottom: 5px;
+            }
+            .next-cat {
+                width: 60px;
+                height: 60px;
+                margin-bottom: 10px;
+            }
+            .instructions {
+                font-size: 0.75em;
+                margin-top: 10px;
+                padding: 0 10px;
+            }
+            .danger-text {
+                font-size: 0.7em;
+            }
+        }
+
+        @media (max-height: 700px) {
+            h1 {
+                font-size: 1.3em;
+                margin-bottom: 5px;
+            }
+            .score-board {
+                font-size: 0.9em;
+                margin-bottom: 5px;
+            }
+            .next-cat {
+                width: 50px;
+                height: 50px;
+                margin-bottom: 8px;
+            }
+            .instructions {
+                font-size: 0.7em;
+                margin-top: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -217,10 +268,16 @@
         const GRAVITY = 0.6;
         const FRICTION = 0.85;  // Much more friction - cats slow down faster
         const BOUNCE = 0.2;     // Less bouncy - cats settle faster
-        const CONTAINER_WIDTH = 400;
-        const CONTAINER_HEIGHT = 500;
         const DANGER_LINE = 80;
         const DANGER_TIME_LIMIT = 60; // Frames in danger zone before game over (about 1 second)
+
+        // Dynamic container dimensions
+        function getContainerWidth() {
+            return container.clientWidth;
+        }
+        function getContainerHeight() {
+            return container.clientHeight;
+        }
 
         // Initialize game
         function init() {
@@ -328,7 +385,7 @@
             const radius = level.size / 2;
 
             // Clamp x position
-            x = Math.max(radius, Math.min(CONTAINER_WIDTH - radius, x));
+            x = Math.max(radius, Math.min(getContainerWidth() - radius, x));
 
             const cat = createCat(x, DANGER_LINE + radius, nextCatLevel);
             cats.push(cat);
@@ -356,18 +413,20 @@
                 cat.y += cat.vy;
 
                 // Wall collisions
+                const containerWidth = getContainerWidth();
+                const containerHeight = getContainerHeight();
                 if (cat.x - cat.radius < 0) {
                     cat.x = cat.radius;
                     cat.vx = -cat.vx * BOUNCE;
                 }
-                if (cat.x + cat.radius > CONTAINER_WIDTH) {
-                    cat.x = CONTAINER_WIDTH - cat.radius;
+                if (cat.x + cat.radius > containerWidth) {
+                    cat.x = containerWidth - cat.radius;
                     cat.vx = -cat.vx * BOUNCE;
                 }
 
                 // Floor collision
-                if (cat.y + cat.radius > CONTAINER_HEIGHT) {
-                    cat.y = CONTAINER_HEIGHT - cat.radius;
+                if (cat.y + cat.radius > containerHeight) {
+                    cat.y = containerHeight - cat.radius;
                     cat.vy = -cat.vy * BOUNCE;
                     if (Math.abs(cat.vy) < 1) cat.vy = 0;
                 }
