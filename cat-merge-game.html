@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Merge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #ffb6c1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .score-board {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .next-cat {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            border: 3px dashed rgba(255,255,255,0.3);
+        }
+
+        .game-container {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            background: rgba(100, 80, 120, 0.5);
+            border: 4px solid #d4af37;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .danger-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 0, 0, 0.1),
+                rgba(255, 0, 0, 0.1) 10px,
+                rgba(255, 0, 0, 0.2) 10px,
+                rgba(255, 0, 0, 0.2) 20px
+            );
+            border-bottom: 2px dashed rgba(255, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        .danger-text {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 100, 100, 0.7);
+            font-size: 0.8em;
+            pointer-events: none;
+        }
+
+        .drop-line {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 80px;
+            background: rgba(255,255,255,0.5);
+            pointer-events: none;
+            display: none;
+        }
+
+        .cat {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+            user-select: none;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            z-index: 100;
+            display: none;
+        }
+
+        .game-over button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            font-size: 1em;
+            background: #ff69b4;
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .game-over button:hover {
+            background: #ff1493;
+        }
+
+        .instructions {
+            color: rgba(255,255,255,0.7);
+            margin-top: 15px;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .merge-effect {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            animation: mergeAnim 0.3s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes mergeAnim {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .warning {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🐱 Cat Merge 🐱</h1>
+    <div class="score-board">Score: <span id="score">0</span></div>
+    <div class="next-cat" id="nextCat"></div>
+    <div class="game-container" id="gameContainer">
+        <div class="danger-zone" id="dangerZone"></div>
+        <div class="danger-text">DANGER ZONE</div>
+        <div class="drop-line" id="dropLine"></div>
+        <div class="game-over" id="gameOver">
+            <div>Game Over!</div>
+            <div style="font-size: 0.7em; margin-top: 10px;">Final Score: <span id="finalScore">0</span></div>
+            <button onclick="restartGame()">Play Again!</button>
+        </div>
+    </div>
+    <div class="instructions">Click to drop cats!<br>Same cats merge into bigger cats!<br>Don't let them reach the danger zone!</div>
+
+    <script>
+        // Cat levels configuration - realistic cat colors and BIGGER sizes!
+        const catLevels = [
+            { size: 60, color: '#FFFEF0', darkColor: '#E8E7D5', name: 'White Kitten' },           // White
+            { size: 75, color: '#FFD59E', darkColor: '#E8B870', name: 'Cream Cat' },              // Cream
+            { size: 95, color: '#FF9F45', darkColor: '#E07A20', name: 'Orange Cat' },             // Orange/Ginger
+            { size: 115, color: '#A0826D', darkColor: '#7A5D4A', name: 'Brown Cat' },             // Brown
+            { size: 135, color: '#888888', darkColor: '#666666', name: 'Gray Cat' },              // Gray
+            { size: 155, color: '#4A4A4A', darkColor: '#2A2A2A', name: 'Dark Gray Cat' },         // Dark gray
+            { size: 175, color: '#2C2C2C', darkColor: '#1A1A1A', name: 'Black Cat' },             // Black
+            { size: 195, color: '#D4A574', darkColor: '#B8895A', name: 'Tan Cat' },               // Tan/Siamese
+            { size: 215, color: '#C9B896', darkColor: '#A89A78', name: 'Silver Cat' },            // Silver tabby
+            { size: 240, color: '#FFD700', darkColor: '#E0BD00', name: 'Golden Cat', crown: true } // Golden King!
+        ];
+
+        const container = document.getElementById('gameContainer');
+        const dropLine = document.getElementById('dropLine');
+        const dangerZone = document.getElementById('dangerZone');
+        const nextCatDisplay = document.getElementById('nextCat');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+
+        let cats = [];
+        let score = 0;
+        let nextCatLevel = 0;
+        let canDrop = true;
+        let gameOver = false;
+        let mouseX = 200;
+        let dangerTime = 0; // Track how long cats are in danger zone
+
+        const GRAVITY = 0.6;
+        const FRICTION = 0.85;  // Much more friction - cats slow down faster
+        const BOUNCE = 0.2;     // Less bouncy - cats settle faster
+        const CONTAINER_WIDTH = 400;
+        const CONTAINER_HEIGHT = 500;
+        const DANGER_LINE = 80;
+        const DANGER_TIME_LIMIT = 60; // Frames in danger zone before game over (about 1 second)
+
+        // Initialize game
+        function init() {
+            cats = [];
+            score = 0;
+            dangerTime = 0;
+            gameOver = false;
+            canDrop = true;
+            scoreDisplay.textContent = '0';
+            gameOverScreen.style.display = 'none';
+            dangerZone.classList.remove('warning');
+            container.querySelectorAll('.cat').forEach(el => el.remove());
+            container.querySelectorAll('.merge-effect').forEach(el => el.remove());
+            generateNextCat();
+            gameLoop();
+        }
+
+        // Generate next cat to drop (only small ones)
+        function generateNextCat() {
+            nextCatLevel = Math.floor(Math.random() * 3); // Only levels 0-2 for dropping
+            updateNextCatDisplay();
+        }
+
+        // Update the preview of next cat
+        function updateNextCatDisplay() {
+            const level = catLevels[nextCatLevel];
+            nextCatDisplay.innerHTML = createCatSVG(level, level.size * 0.7);
+        }
+
+        // Create cute cat SVG
+        function createCatSVG(level, size) {
+            const hasCrown = level.crown;
+            // Check if it's a dark cat - need lighter features
+            const isDark = level.color === '#4A4A4A' || level.color === '#2C2C2C';
+            const whiskerColor = isDark ? '#888' : '#333';
+            const mouthColor = isDark ? '#888' : '#333';
+            const innerEarColor = isDark ? '#666' : '#ffb6c1';
+
+            return `
+                <svg width="${size}" height="${size}" viewBox="0 0 100 100">
+                    ${hasCrown ? `
+                        <text x="50" y="12" text-anchor="middle" font-size="20">👑</text>
+                    ` : ''}
+                    <!-- Ears -->
+                    <polygon points="15,35 25,5 40,30" fill="${level.color}" stroke="${level.darkColor}" stroke-width="2"/>
+                    <polygon points="85,35 75,5 60,30" fill="${level.color}" stroke="${level.darkColor}" stroke-width="2"/>
+                    <!-- Inner ears -->
+                    <polygon points="20,32 27,12 37,30" fill="${innerEarColor}"/>
+                    <polygon points="80,32 73,12 63,30" fill="${innerEarColor}"/>
+                    <!-- Head -->
+                    <ellipse cx="50" cy="55" rx="40" ry="38" fill="${level.color}" stroke="${level.darkColor}" stroke-width="2"/>
+                    <!-- Eyes -->
+                    <ellipse cx="35" cy="50" rx="9" ry="11" fill="#90EE90"/>
+                    <ellipse cx="65" cy="50" rx="9" ry="11" fill="#90EE90"/>
+                    <ellipse cx="36" cy="52" rx="4" ry="7" fill="#111"/>
+                    <ellipse cx="66" cy="52" rx="4" ry="7" fill="#111"/>
+                    <!-- Eye shine -->
+                    <circle cx="38" cy="48" r="2.5" fill="white"/>
+                    <circle cx="68" cy="48" r="2.5" fill="white"/>
+                    <!-- Nose -->
+                    <ellipse cx="50" cy="65" rx="5" ry="4" fill="#ffb6c1"/>
+                    <!-- Mouth -->
+                    <path d="M 43 72 Q 50 78 57 72" stroke="${mouthColor}" stroke-width="2" fill="none"/>
+                    <line x1="50" y1="69" x2="50" y2="72" stroke="${mouthColor}" stroke-width="2"/>
+                    <!-- Whiskers -->
+                    <line x1="12" y1="60" x2="28" y2="63" stroke="${whiskerColor}" stroke-width="1.5"/>
+                    <line x1="12" y1="68" x2="28" y2="68" stroke="${whiskerColor}" stroke-width="1.5"/>
+                    <line x1="12" y1="76" x2="28" y2="73" stroke="${whiskerColor}" stroke-width="1.5"/>
+                    <line x1="72" y1="63" x2="88" y2="60" stroke="${whiskerColor}" stroke-width="1.5"/>
+                    <line x1="72" y1="68" x2="88" y2="68" stroke="${whiskerColor}" stroke-width="1.5"/>
+                    <line x1="72" y1="73" x2="88" y2="76" stroke="${whiskerColor}" stroke-width="1.5"/>
+                </svg>
+            `;
+        }
+
+        // Create a new cat object
+        function createCat(x, y, levelIndex) {
+            const level = catLevels[levelIndex];
+            const cat = {
+                x: x,
+                y: y,
+                vx: 0,
+                vy: 0,
+                radius: level.size / 2 * 0.85,  // Adjusted collision radius to match cat face
+                level: levelIndex,
+                element: document.createElement('div'),
+                merged: false,
+                dropTime: Date.now()
+            };
+
+            cat.element.className = 'cat';
+            cat.element.innerHTML = createCatSVG(level, level.size);
+            cat.element.style.width = level.size + 'px';
+            cat.element.style.height = level.size + 'px';
+            container.appendChild(cat.element);
+
+            return cat;
+        }
+
+        // Drop a cat
+        function dropCat(x) {
+            if (!canDrop || gameOver) return;
+
+            const level = catLevels[nextCatLevel];
+            const radius = level.size / 2;
+
+            // Clamp x position
+            x = Math.max(radius, Math.min(CONTAINER_WIDTH - radius, x));
+
+            const cat = createCat(x, DANGER_LINE + radius, nextCatLevel);
+            cats.push(cat);
+
+            canDrop = false;
+            setTimeout(() => {
+                canDrop = true;
+                generateNextCat();
+            }, 600); // Slightly longer delay between drops
+        }
+
+        // Physics update
+        function updatePhysics() {
+            for (let cat of cats) {
+                if (cat.merged) continue;
+
+                // Apply gravity
+                cat.vy += GRAVITY;
+
+                // Apply friction
+                cat.vx *= FRICTION;
+
+                // Update position
+                cat.x += cat.vx;
+                cat.y += cat.vy;
+
+                // Wall collisions
+                if (cat.x - cat.radius < 0) {
+                    cat.x = cat.radius;
+                    cat.vx = -cat.vx * BOUNCE;
+                }
+                if (cat.x + cat.radius > CONTAINER_WIDTH) {
+                    cat.x = CONTAINER_WIDTH - cat.radius;
+                    cat.vx = -cat.vx * BOUNCE;
+                }
+
+                // Floor collision
+                if (cat.y + cat.radius > CONTAINER_HEIGHT) {
+                    cat.y = CONTAINER_HEIGHT - cat.radius;
+                    cat.vy = -cat.vy * BOUNCE;
+                    if (Math.abs(cat.vy) < 1) cat.vy = 0;
+                }
+            }
+
+            // Cat-cat collisions
+            for (let i = 0; i < cats.length; i++) {
+                for (let j = i + 1; j < cats.length; j++) {
+                    const cat1 = cats[i];
+                    const cat2 = cats[j];
+
+                    if (cat1.merged || cat2.merged) continue;
+
+                    const dx = cat2.x - cat1.x;
+                    const dy = cat2.y - cat1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = cat1.radius + cat2.radius;
+
+                    if (dist < minDist && dist > 0) {
+                        // Check for merge
+                        if (cat1.level === cat2.level && cat1.level < catLevels.length - 1) {
+                            mergeCats(cat1, cat2);
+                        } else {
+                            // Collision response with friction
+                            const overlap = minDist - dist;
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+
+                            // Push cats apart
+                            cat1.x -= overlap * nx * 0.5;
+                            cat1.y -= overlap * ny * 0.5;
+                            cat2.x += overlap * nx * 0.5;
+                            cat2.y += overlap * ny * 0.5;
+
+                            // Velocity exchange with friction
+                            const dvx = cat1.vx - cat2.vx;
+                            const dvy = cat1.vy - cat2.vy;
+                            const dvn = dvx * nx + dvy * ny;
+
+                            if (dvn > 0) {
+                                // Normal impulse (bouncing)
+                                cat1.vx -= dvn * nx * BOUNCE;
+                                cat1.vy -= dvn * ny * BOUNCE;
+                                cat2.vx += dvn * nx * BOUNCE;
+                                cat2.vy += dvn * ny * BOUNCE;
+
+                                // Tangent friction (sliding)
+                                const tx = -ny;
+                                const ty = nx;
+                                const dvt = dvx * tx + dvy * ty;
+                                const frictionAmount = 0.3;
+                                cat1.vx -= dvt * tx * frictionAmount;
+                                cat1.vy -= dvt * ty * frictionAmount;
+                                cat2.vx += dvt * tx * frictionAmount;
+                                cat2.vy += dvt * ty * frictionAmount;
+                            }
+
+                            // Extra damping when cats are touching
+                            cat1.vx *= 0.95;
+                            cat1.vy *= 0.95;
+                            cat2.vx *= 0.95;
+                            cat2.vy *= 0.95;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Merge two cats
+        function mergeCats(cat1, cat2) {
+            cat1.merged = true;
+            cat2.merged = true;
+
+            // Create merge effect
+            const effect = document.createElement('div');
+            effect.className = 'merge-effect';
+            const effectSize = cat1.radius * 2;
+            effect.style.left = ((cat1.x + cat2.x) / 2 - cat1.radius) + 'px';
+            effect.style.top = ((cat1.y + cat2.y) / 2 - cat1.radius) + 'px';
+            effect.style.width = effectSize + 'px';
+            effect.style.height = effectSize + 'px';
+            container.appendChild(effect);
+            setTimeout(() => effect.remove(), 300);
+
+            // Remove old cats
+            cat1.element.remove();
+            cat2.element.remove();
+
+            // Create new merged cat
+            const newLevel = cat1.level + 1;
+            const newX = (cat1.x + cat2.x) / 2;
+            const newY = (cat1.y + cat2.y) / 2;
+            const newCat = createCat(newX, newY, newLevel);
+            newCat.vx = (cat1.vx + cat2.vx) / 2;
+            newCat.vy = (cat1.vy + cat2.vy) / 2 - 3; // Little bounce up
+
+            // Update score - bigger cats = more points
+            const points = Math.pow(2, newLevel + 1);
+            score += points;
+            scoreDisplay.textContent = score;
+
+            // Remove merged cats and add new one
+            cats = cats.filter(c => !c.merged);
+            cats.push(newCat);
+        }
+
+        // Render cats
+        function render() {
+            for (let cat of cats) {
+                cat.element.style.left = (cat.x - cat.radius) + 'px';
+                cat.element.style.top = (cat.y - cat.radius) + 'px';
+            }
+        }
+
+        // Check game over - if cats stay in danger zone too long
+        function checkGameOver() {
+            const now = Date.now();
+            let inDanger = false;
+
+            for (let cat of cats) {
+                // Check if cat has been around for a bit and is in danger zone
+                const timeSinceDrop = now - cat.dropTime;
+                if (timeSinceDrop > 500 && cat.y - cat.radius < DANGER_LINE) {
+                    inDanger = true;
+                    break;
+                }
+            }
+
+            if (inDanger) {
+                dangerTime++;
+                dangerZone.classList.add('warning');
+
+                if (dangerTime >= DANGER_TIME_LIMIT) {
+                    gameOver = true;
+                    finalScoreDisplay.textContent = score;
+                    gameOverScreen.style.display = 'flex';
+                }
+            } else {
+                dangerTime = Math.max(0, dangerTime - 2); // Slowly decrease danger time
+                if (dangerTime === 0) {
+                    dangerZone.classList.remove('warning');
+                }
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameOver) {
+                updatePhysics();
+                render();
+                checkGameOver();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Restart game
+        function restartGame() {
+            init();
+        }
+
+        // Event listeners
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            dropLine.style.left = mouseX + 'px';
+            dropLine.style.display = 'block';
+        });
+
+        container.addEventListener('mouseleave', () => {
+            dropLine.style.display = 'none';
+        });
+
+        container.addEventListener('click', (e) => {
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            dropCat(x);
+        });
+
+        // Touch support for mobile
+        container.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = container.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            dropCat(x);
+        });
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
